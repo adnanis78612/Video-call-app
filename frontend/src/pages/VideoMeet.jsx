@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
+import { useNavigate } from "react-router-dom";
 import io from "socket.io-client";
 import { Badge, IconButton, TextField } from '@mui/material';
 import { Button } from '@mui/material';
@@ -25,6 +26,7 @@ const peerConfigConnections = {
 
 export default function VideoMeetComponent() {
 
+    const navigate = useNavigate();
     var socketRef = useRef();
     let socketIdRef = useRef();
 
@@ -383,13 +385,18 @@ export default function VideoMeetComponent() {
     }
 
     let handleVideo = () => {
-        setVideo(!video);
-        // getUserMedia();
-    }
-    let handleAudio = () => {
-        setAudio(!audio)
-        // getUserMedia();
-    }
+    window.localStream?.getVideoTracks().forEach(track => {
+        track.enabled = !track.enabled;
+    });
+    setVideo(prev => !prev);
+}
+
+let handleAudio = () => {
+    window.localStream?.getAudioTracks().forEach(track => {
+        track.enabled = !track.enabled;
+    });
+    setAudio(prev => !prev);
+}
 
     useEffect(() => {
         if (screen !== undefined) {
@@ -405,7 +412,7 @@ export default function VideoMeetComponent() {
             let tracks = localVideoref.current.srcObject.getTracks()
             tracks.forEach(track => track.stop())
         } catch (e) { }
-        window.location.href = "/"
+        navigate("/home");
     }
 
     let openChat = () => {
@@ -432,9 +439,10 @@ export default function VideoMeetComponent() {
 
 
     let sendMessage = () => {
-        console.log(socketRef.current);
-        socketRef.current.emit('chat-message', message, username)
-        setMessage("");
+    if (!message.trim()) return;
+
+    socketRef.current.emit("chat-message", message, username);
+    setMessage("");
 
         // this.setState({ message: "", sender: username })
     }
@@ -490,7 +498,19 @@ export default function VideoMeetComponent() {
                             </div>
 
                             <div className={styles.chattingArea}>
-                                <TextField value={message} onChange={(e) => setMessage(e.target.value)} id="outlined-basic" label="Enter Your chat" variant="outlined" />
+                                <TextField
+    value={message}
+    onChange={(e) => setMessage(e.target.value)}
+    onKeyDown={(e) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            sendMessage();
+        }
+    }}
+    id="outlined-basic"
+    label="Enter Your chat"
+    variant="outlined"
+/>
                                 <Button variant='contained' onClick={sendMessage}>Send</Button>
                             </div>
 
